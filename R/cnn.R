@@ -296,6 +296,7 @@ predict.citocnn <- function(object,
                             newdata = NULL,
                             type=c("link", "response", "class"),
                             device = c("cpu","cuda", "mps"),
+                            eval_mode=T,
                             batchsize = 32L, ...) {
 
   checkmate::assert(checkmate::checkNull(newdata),
@@ -328,6 +329,7 @@ predict.citocnn <- function(object,
   dl <- get_data_loader(newdata, batch_size = batchsize, shuffle = FALSE)
 
   pred <- NULL
+  if(eval_mode) object$net$eval()
   coro::loop(for(b in dl) {
     if(is.null(pred)) pred <- torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu"))
     else pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu")))
@@ -339,7 +341,7 @@ predict.citocnn <- function(object,
     colnames(pred) <- object$data$ylvls
     if(type == "class") pred <- factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]), levels = object$data$ylvls)
   }
-
+  if(eval_mode) object$net$train()
   return(pred)
 }
 
