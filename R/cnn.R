@@ -303,7 +303,7 @@ predict.citocnn <- function(object,
   checkmate::assert(checkmate::checkNull(newdata),
                     checkmate::checkArray(newdata, min.d = 3, max.d = 5))
 
-  object <- check_model(object)
+  #object <- check_model(object)
 
   type <- match.arg(type)
 
