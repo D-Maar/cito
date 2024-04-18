@@ -287,6 +287,7 @@ cnn <- function(X,
 #' @param newdata new data for predictions
 #' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
 #' @param device device on which network should be trained on.
+#' @para, eval_mode boolean; whether model should be switched to evaluation mode
 #' @param batchsize number of samples that are predicted at the same time
 #' @param ... additional arguments
 #' @return prediction matrix
