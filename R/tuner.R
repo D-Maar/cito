@@ -124,9 +124,8 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
             break
           } else {
             pred = stats::predict(m, newdata = data[cv,,drop=FALSE])
-            tune_df$test[i] = tune_df$test[i]+as.numeric(loss.fkt((
-              torch::torch_tensor(pred, dtype=torch::torch_float32(), device = device)),
-              Y_torch[cv,,drop=FALSE]$to(device = device))$sum()$cpu())
+tune_df$test[i] = tune_df$test[i]+as.numeric(
+            loss.fkt(torch::torch_tensor(loss_obj$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv,,drop=FALSE]$to(device = device))$sum()$cpu())
           }
         }
       pb$tick(tokens = list(hp = format_hp, test_loss = round(tune_df$test[i], digits = 3)))
@@ -193,9 +192,8 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
           break
         } else {
           pred = stats::predict(m, newdata = data[cv,,drop=FALSE])
-          tune_df$test[i] = tune_df$test[i]+as.numeric(loss.fkt((
-            torch::torch_tensor(pred, dtype=torch::torch_float32(), device = device)),
-            Y_torch[cv,,drop=FALSE]$to(device = device))$sum()$cpu())
+tune_df$test[i] = tune_df$test[i]+as.numeric(
+            loss.fkt(torch::torch_tensor(loss_obj$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv,,drop=FALSE]$to(device = device))$sum()$cpu())
         }
       }
       return(tune_df[i,])
