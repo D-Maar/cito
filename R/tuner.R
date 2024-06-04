@@ -67,7 +67,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
   if(is.null(tuning$CV_sampler)){
     set = cut(sample.int(nrow(X)), breaks = tuning$CV, labels = FALSE)
   } else {
-    set = tuning$CV_function()
+    set = tuning$CV_sampler()
   }
   
   test_indices = lapply(unique(set), function(s) which(set == s, arr.ind = TRUE))
