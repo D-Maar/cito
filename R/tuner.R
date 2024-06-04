@@ -41,7 +41,7 @@ tune = function(lower = NULL, upper = NULL, fixed = NULL, additional = NULL, val
 #'
 #'
 #' @export
-config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE, bootstrap_final = NULL, bootstrap_parallel = FALSE, return_models=FALSE, CV_function = NULL, CV_assignment_function_additional_parameters = NULL) {
+config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE, bootstrap_final = NULL, bootstrap_parallel = FALSE, return_models=FALSE, CV_sampler=NULL) {
   out = list()
   out$CV = CV
   out$steps = steps
@@ -50,9 +50,7 @@ config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel 
   out$bootstrap = bootstrap_final
   out$bootstrap_parallel = bootstrap_parallel
   out$return_models = return_models
-  if(is.null(CV_function) & !is.null(CV_assignment_function_additional_parameters)) stop("in config_tuning:\nreceived additional parameters for the CV-assignment function, but no CV_assignment_function was provided")
-  out$CV_function = CV_function
-  out$CV_assignment_function_additional_parameters = CV_assignment_function_additional_parameters
+  out$CV_sampler=CV_sampler
   return(out)
 }
 
@@ -66,11 +64,12 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
 
   cat("Starting hyperparameter tuning...\n")
 
-  if(is.null(tuning$CV_function)){
+  if(is.null(tuning$CV_sampler)){
     set = cut(sample.int(nrow(X)), breaks = tuning$CV, labels = FALSE)
   } else {
-    set = tuning$CV_function(c(list("CV" = tuning$CV), tuning$CV_assignment_function_additional_parameters))
+    set = tuning$CV_function()
   }
+  
   test_indices = lapply(unique(set), function(s) which(set == s, arr.ind = TRUE))
 
   steps = tuning$steps
