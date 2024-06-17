@@ -553,7 +553,9 @@ check_call_config <- function(mc, variable ,standards, dim = 1, check_var = FALS
               print(\"must be numeric input\")) ")))
     }
 
-    if(!isFALSE(check_var)) checkmate::qassert(value,check_var)
+    if(!isFALSE(check_var)){
+      if (class(value) == "language" | class(value) == "call") value <- eval(value, envir = parent.frame(2L))
+      checkmate::qassert(value,check_var)
 
   } else{
     value <- unlist(standards[which(names(standards) == variable)])
