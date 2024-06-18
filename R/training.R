@@ -442,6 +442,9 @@ config_lr_scheduler <- function(type = c("lambda", "multiplicative", "reduce_on_
 
   }else if (out$lr_scheduler == "step"){
     if("step_size" %in% names(mc)){
+      if(class(mc$step_size)=="call"){
+        mc$step_size <- eval(mc$step_size, envir=parent.frame(2L))
+      }
       out$step_size <- mc$step_size
       if (verbose) cat(paste0("step_size: [", out$step_size, "]\n"))
     } else{
