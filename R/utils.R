@@ -554,7 +554,7 @@ check_call_config <- function(mc, variable ,standards, dim = 1, check_var = FALS
     }
 
     if(!isFALSE(check_var)){
-      if(class(check_var) == "language" | class(check_var) == "call"){
+      if(class(value) == "language" | class(value) == "call"){
         value <- eval(value, envir = parent.frame(2L))
       }
       checkmate::qassert(value,check_var)
