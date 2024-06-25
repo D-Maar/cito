@@ -122,7 +122,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
             tune_df$test[i] = Inf
             break
           } else {
-          pred = predict(m, newdata = data[cv,,drop=FALSE], type = "response")
+          pred = predict(m, newdata = data[cv,,drop=FALSE], type = "response", device = parameters$device)
 tune_df$test[i] = tune_df$test[i]+as.numeric(
             loss.fkt(torch::torch_tensor(loss_obj$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv,,drop=FALSE]$to(device = device))$sum()$cpu())
           }
@@ -190,7 +190,7 @@ tune_df$test[i] = tune_df$test[i]+as.numeric(
           tune_df$test[i] = Inf
           break
         } else {
-          pred = predict(m, newdata = data[cv,,drop=FALSE], type = "response")
+          pred = predict(m, newdata = data[cv,,drop=FALSE], type = "response", device = parameters$device)
 tune_df$test[i] = tune_df$test[i]+as.numeric(
             loss.fkt(torch::torch_tensor(loss_obj$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv,,drop=FALSE]$to(device = device))$sum()$cpu())
         }
