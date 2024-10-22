@@ -120,35 +120,21 @@
 #' @author Armin Schenk, Maximilian Pichler
 #' @seealso \code{\link{predict.citocnn}}, \code{\link{plot.citocnn}},  \code{\link{coef.citocnn}}, \code{\link{print.citocnn}}, \code{\link{summary.citocnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 #'
-cnn <- function(X,
-                Y = NULL,
-                architecture,
-                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
-                optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
-                lr = 0.01,
-                alpha = 0.5,
-                lambda = 0.0,
-                validation = 0.0,
-                batchsize = 32L,
-                burnin = 10,
-                shuffle = TRUE,
-                epochs = 100,
-                early_stopping = NULL,
-                lr_scheduler = NULL,
-                custom_parameters = NULL,
-                device = c("cpu", "cuda", "mps"),
-                plot = TRUE,
-                verbose = TRUE) {
 
-  #Data
+cnn<-function (X, Y = NULL, architecture, loss = c("mse", "mae",
+                                              "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
+          optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop",
+                        "rprop"), lr = 0.01, alpha = 0.5, lambda = 0, validation = 0,
+          batchsize = 32L, burnin = 10, shuffle = TRUE, epochs = 100,
+          early_stopping = NULL, lr_scheduler = NULL, custom_parameters = NULL,
+          device = c("cpu", "cuda", "mps"), plot = TRUE, verbose = TRUE)
+{
   checkmate::assert(checkmate::checkArray(X, min.d = 3, max.d = 5))
   checkmate::assert(checkmate::checkFactor(Y), checkmate::checkNumeric(Y),
-                    checkmate::checkMatrix(Y, mode = "numeric"), checkmate::checkMatrix(Y, mode = "logical"),
-                    checkmate::checkNull(Y))
-
-  if(!inherits(architecture, "citoarchitecture")) stop("architecture is not an object of class 'citoarchitecture'. See ?create_architecture for more info.")
-
-  #Training
+                    checkmate::checkMatrix(Y, mode = "numeric"), checkmate::checkMatrix(Y,
+                                                                                        mode = "logical"), checkmate::checkNull(Y))
+  if (!inherits(architecture, "citoarchitecture"))
+    stop("architecture is not an object of class 'citoarchitecture'. See ?create_architecture for more info.")
   checkmate::qassert(lr, "R+[0,)")
   checkmate::qassert(lambda, "R1[0,)")
   checkmate::qassert(alpha, "R1[0,1]")
@@ -156,28 +142,19 @@ cnn <- function(X,
   checkmate::qassert(batchsize, "X1[1,)")
   checkmate::qassert(shuffle, "B1")
   checkmate::qassert(epochs, "X1[0,)")
-  checkmate::qassert(early_stopping, c("0","X1[1,)"))
+  checkmate::qassert(early_stopping, c("0", "X1[1,)"))
   checkmate::qassert(custom_parameters, c("0", "L+"))
   checkmate::qassert(plot, "B1")
   checkmate::qassert(verbose, "B1")
   checkmate::qassert(device, "S+[3,)")
-
-
-  # No training if no Y specified (E.g. used in mmn())
-  if(is.null(Y)) {
-
+  if (is.null(Y)) {
     input_shape <- dim(X)[-1]
-
-    architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
-
-    net <- build_cnn(input_shape = input_shape,
-                     output_shape = NULL,
+    architecture <- adjust_architecture(architecture = architecture,
+                                        input_dim = length(input_shape) - 1)
+    net <- build_cnn(input_shape = input_shape, output_shape = NULL,
                      architecture = architecture)
-
-    model_properties <- list(input = input_shape,
-                             output = NULL,
+    model_properties <- list(input = input_shape, output = NULL,
                              architecture = architecture)
-
     out <- list()
     class(out) <- "citocnn"
     out$net <- net
@@ -186,26 +163,26 @@ cnn <- function(X,
     out$model_properties <- model_properties
     return(out)
   }
-
   device <- match.arg(device)
   device_old <- device
   device <- check_device(device)
-
-  if(!is.function(loss) & !inherits(loss,"family")) {
+  if (!is.function(loss) & !inherits(loss, "family")) {
     loss <- match.arg(loss)
   }
-
   loss_obj <- get_loss(loss)
-  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(scale = loss_obj$parameter)
-  if(!is.null(custom_parameters)){
-    if(!inherits(custom_parameters,"list")){
+  if (!is.null(loss_obj$parameter))
+    loss_obj$parameter <- list(scale = loss_obj$parameter)
+  if (!is.null(custom_parameters)) {
+    if (!inherits(custom_parameters, "list")) {
       warning("custom_parameters has to be list")
-    } else {
-      custom_parameters <- lapply(custom_parameters, function(x) torch::torch_tensor(x, requires_grad = TRUE, device = device))
-      loss_obj$parameter <- append(loss_obj$parameter, unlist(custom_parameters))
+    }
+    else {
+      custom_parameters <- lapply(custom_parameters, function(x) torch::torch_tensor(x,
+                                                                                     requires_grad = TRUE, device = device))
+      loss_obj$parameter <- append(loss_obj$parameter,
+                                   unlist(custom_parameters))
     }
   }
-
   old_X <- X
   old_Y <- Y
   targets <- format_targets(Y, loss_obj)
@@ -213,56 +190,47 @@ cnn <- function(X,
   Y_base <- targets$Y_base
   y_dim <- targets$y_dim
   ylvls <- targets$ylvls
-
   X <- torch::torch_tensor(X, dtype = torch::torch_float32())
-
   loss.fkt <- loss_obj$loss
-  if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
+  if (!is.null(loss_obj$parameter))
+    list2env(loss_obj$parameter, envir = environment(fun = loss.fkt))
   base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y)$mean())
-
-  if(validation != 0) {
+  if (validation != 0) {
     n_samples <- dim(X)[1]
-    valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
+    valid <- sort(sample(c(1:n_samples), replace = FALSE,
+                         size = round(validation * n_samples)))
     train <- c(1:n_samples)[-valid]
-    train_dl <- get_data_loader(X[train,], Y[train,], batch_size = batchsize, shuffle = shuffle)
-    valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle)
-  } else {
-    train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle)
+    train_dl <- get_data_loader(X[train, ], Y[train, ],
+                                batch_size = batchsize, shuffle = shuffle)
+    valid_dl <- get_data_loader(X[valid, ], Y[valid, ],
+                                batch_size = batchsize, shuffle = shuffle)
+  }
+  else {
+    train_dl <- get_data_loader(X, Y, batch_size = batchsize,
+                                shuffle = shuffle)
     valid_dl <- NULL
   }
-
   input_shape <- dim(X)[-1]
-
-  architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
-
-  net <- build_cnn(input_shape = input_shape,
-                   output_shape = y_dim,
+  architecture <- adjust_architecture(architecture = architecture,
+                                      input_dim = length(input_shape) - 1)
+  net <- build_cnn(input_shape = input_shape, output_shape = y_dim,
                    architecture = architecture)
-
-  model_properties <- list(input = input_shape,
-                           output = y_dim,
+  model_properties <- list(input = input_shape, output = y_dim,
                            architecture = architecture)
-
-  training_properties <- list(lr = lr,
-                              lr_scheduler = lr_scheduler,
-                              optimizer = optimizer,
-                              epochs = epochs,
-                              early_stopping = early_stopping,
-                              plot = plot,
-                              validation = validation,
-                              lambda = lambda,
-                              alpha = alpha,
-                              batchsize = batchsize,
-                              shuffle = shuffle)
-
+  training_properties <- list(lr = lr, lr_scheduler = lr_scheduler,
+                              optimizer = optimizer, epochs = epochs, early_stopping = early_stopping,
+                              plot = plot, validation = validation, lambda = lambda,
+                              alpha = alpha, batchsize = batchsize, shuffle = shuffle)
   out <- list()
   class(out) <- "citocnn"
   out$net <- net
   out$call <- match.call()
   out$loss <- loss_obj
   out$data <- list(X = old_X, Y = old_Y)
-  if(!is.null(ylvls)) out$data$ylvls <- ylvls
-  if(validation != 0) out$data <- append(out$data, list(validation = valid))
+  if (!is.null(ylvls))
+    out$data$ylvls <- ylvls
+  if (validation != 0)
+    out$data <- append(out$data, list(validation = valid))
   out$base_loss <- base_loss
   out$weights <- list()
   out$use_model_epoch <- 1
@@ -271,15 +239,11 @@ cnn <- function(X,
   out$training_properties <- training_properties
   out$device <- device_old
   out$burnin = burnin
-
-
-
-  ### training loop ###
-  out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
-
-
+  out <- train_model(model = out, epochs = epochs, device = device,
+                     train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
   return(out)
 }
+
 
 #' Predict from a fitted cnn model
 #'
