@@ -157,7 +157,7 @@ inceptionBlock_A_2D = torch::nn_module(
     )
 
     self$branchC = torch::nn_sequential(
-      nn_avg_pool2d(
+      torch::nn_avg_pool2d(
         kernel_size = c(3L,3L)
         , stride = 1L
         , padding = 1L
@@ -240,7 +240,7 @@ inceptionBlock_A_2D_reduction = torch::nn_module(
     )
 
     self$branchC = torch::nn_sequential(
-      nn_avg_pool2d(
+      torch::nn_avg_pool2d(
         kernel_size = c(3L,3L)
         , stride = 1L
         , padding = 0L
@@ -327,7 +327,7 @@ inceptionBlock_A_1D = torch::nn_module(
     )
 
     self$branchC = torch::nn_sequential(
-      nn_avg_pool2d(
+      torch::nn_avg_pool2d(
         kernel_size = c(1L,3L)
         , stride = 1L
         , padding = 0L
