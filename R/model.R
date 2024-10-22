@@ -285,7 +285,7 @@ inceptionBlock_A_1D = torch::nn_module(
 
   initialize = function(in_channels, channel_mult=16L){
 
-    self$branchA = nn_sequential(
+    self$branchA = torch::nn_sequential(
       convBlock(
         in_channels = in_channels
         , out_channels = 4L*channel_mult
