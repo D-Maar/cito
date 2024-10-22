@@ -208,7 +208,7 @@ inceptionBlock_A_2D = torch::nn_module(
     # print(branchBRes$size())
     # print(branchCRes$size())
     # print(branchDRes$size())
-    res = torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
+    res = torch::torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
     res
   }
 )
@@ -298,7 +298,7 @@ inceptionBlock_A_2D_reduction = torch::nn_module(
     # print(branchBRes$size())
     # print(branchCRes$size())
     # print(branchDRes$size())
-    res = torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
+    res = torch::torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
     res
   }
 )
@@ -392,7 +392,7 @@ inceptionBlock_A_1D = torch::nn_module(
     # print(branchBRes$size())
     # print(branchCRes$size())
     # print(branchDRes$size())
-    res = torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
+    res = torch::torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
     res
   }
 )
