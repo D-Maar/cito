@@ -96,15 +96,15 @@ build_dnn = function(input, output, hidden, activation, bias, dropout, embedding
   return(net)
 }
 
-convBlock = nn_module(
+convBlock = torch::nn_module(
   initialize = function(in_channels, out_channels, kernel_size, stride, padding){
-    self$conv=nn_conv2d(in_channels = in_channels
+    self$conv=torch::nn_conv2d(in_channels = in_channels
                         , out_channels = out_channels
                         , kernel_size = kernel_size
                         , stride = stride
                         , padding = padding)
-    self$batchNorm = nn_batch_norm2d(out_channels)
-    self$activation = nn_relu()
+    self$batchNorm = torch::nn_batch_norm2d(out_channels)
+    self$activation = torch::nn_relu()
   },
   forward = function(x){
     x |>
@@ -113,12 +113,12 @@ convBlock = nn_module(
       self$activation()
   }
 )
-inceptionBlock_A_2D = nn_module(
+inceptionBlock_A_2D = torch::nn_module(
 
 
   initialize = function(in_channels, channel_mult=16L){
 
-    self$branchA = nn_sequential(
+    self$branchA = torch::nn_sequential(
       convBlock(
         in_channels = in_channels
         , out_channels = 4L*channel_mult
@@ -139,7 +139,7 @@ inceptionBlock_A_2D = nn_module(
         , padding = 1L)
     )
 
-    self$branchB = nn_sequential(
+    self$branchB = torch::nn_sequential(
       convBlock(
         in_channels = in_channels
         , out_channels = 3L*channel_mult
@@ -156,7 +156,7 @@ inceptionBlock_A_2D = nn_module(
       )
     )
 
-    self$branchC = nn_sequential(
+    self$branchC = torch::nn_sequential(
       nn_avg_pool2d(
         kernel_size = c(3L,3L)
         , stride = 1L
@@ -189,16 +189,16 @@ inceptionBlock_A_2D = nn_module(
     # print(branchBRes$size())
     # print(branchCRes$size())
     # print(branchDRes$size())
-    res = torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
+    res = torch::torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
     res
   }
 )
-inceptionBlock_A_2D_reduction = nn_module(
+inceptionBlock_A_2D_reduction = torch::nn_module(
 
 
   initialize = function(in_channels, channel_mult=16L){
 
-    self$branchA = nn_sequential(
+    self$branchA = torch::nn_sequential(
       convBlock(
         in_channels = in_channels
         , out_channels = 4L*channel_mult
@@ -222,7 +222,7 @@ inceptionBlock_A_2D_reduction = nn_module(
       )
     )
 
-    self$branchB = nn_sequential(
+    self$branchB = torch::nn_sequential(
       convBlock(
         in_channels = in_channels
         , out_channels = 3L*channel_mult
@@ -239,7 +239,7 @@ inceptionBlock_A_2D_reduction = nn_module(
       )
     )
 
-    self$branchC = nn_sequential(
+    self$branchC = torch::nn_sequential(
       nn_avg_pool2d(
         kernel_size = c(3L,3L)
         , stride = 1L
@@ -272,7 +272,7 @@ inceptionBlock_A_2D_reduction = nn_module(
     # print(branchBRes$size())
     # print(branchCRes$size())
     # print(branchDRes$size())
-    res = torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
+    res = torch::torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
     res
   }
 )
@@ -280,7 +280,7 @@ inceptionBlock_A_2D_reduction = nn_module(
 
 
 
-inceptionBlock_A_1D = nn_module(
+inceptionBlock_A_1D = torch::nn_module(
 
 
   initialize = function(in_channels, channel_mult=16L){
@@ -309,7 +309,7 @@ inceptionBlock_A_1D = nn_module(
       )
     )
 
-    self$branchB = nn_sequential(
+    self$branchB = torch::nn_sequential(
       convBlock(
         in_channels = in_channels
         , out_channels = 3L*channel_mult
@@ -326,7 +326,7 @@ inceptionBlock_A_1D = nn_module(
       )
     )
 
-    self$branchC = nn_sequential(
+    self$branchC = torch::nn_sequential(
       nn_avg_pool2d(
         kernel_size = c(1L,3L)
         , stride = 1L
@@ -359,7 +359,7 @@ inceptionBlock_A_1D = nn_module(
     # print(branchBRes$size())
     # print(branchCRes$size())
     # print(branchDRes$size())
-    res = torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
+    res = torch::torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
     res
   }
 )
