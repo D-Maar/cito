@@ -121,14 +121,22 @@
 #' @seealso \code{\link{predict.citocnn}}, \code{\link{plot.citocnn}},  \code{\link{coef.citocnn}}, \code{\link{print.citocnn}}, \code{\link{summary.citocnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 #'
 
-cnn<-function (X, Y = NULL, architecture, loss = c("mse", "mae",
+cnn<-function (X = NULL, Y = NULL, architecture, loss = c("mse", "mae",
                                               "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
           optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop",
                         "rprop"), lr = 0.01, alpha = 0.5, lambda = 0, validation = 0,
           batchsize = 32L, burnin = 10, shuffle = TRUE, epochs = 100,
           early_stopping = NULL, lr_scheduler = NULL, custom_parameters = NULL,
-          device = c("cpu", "cuda", "mps"), plot = TRUE, verbose = TRUE)
+          device = c("cpu", "cuda", "mps"), plot = TRUE, verbose = TRUE, train_data_loader=NULL, valid_data_loader=NULL)
 {
+  use_custom_dl<-!is.null(dataloader)
+  if(use_custom_dl){
+    sample_batch = data_loader$.iter()$.next()
+    X<- as.array(sample_batch$X)
+    Y<- c(as.matrix(sample_batch$Y))
+    batchsize=2L
+    if(!xor(is.null(valid_data_loader), validation!=0)) stop("You need to provided an validation data loader if you want to use a validation split with a custom data loader")
+  }
   checkmate::assert(checkmate::checkArray(X, min.d = 3, max.d = 5))
   checkmate::assert(checkmate::checkFactor(Y), checkmate::checkNumeric(Y),
                     checkmate::checkMatrix(Y, mode = "numeric"), checkmate::checkMatrix(Y,
@@ -195,20 +203,26 @@ cnn<-function (X, Y = NULL, architecture, loss = c("mse", "mae",
   if (!is.null(loss_obj$parameter))
     list2env(loss_obj$parameter, envir = environment(fun = loss.fkt))
   base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y)$mean())
-  if (validation != 0) {
-    n_samples <- dim(X)[1]
-    valid <- sort(sample(c(1:n_samples), replace = FALSE,
-                         size = round(validation * n_samples)))
-    train <- c(1:n_samples)[-valid]
-    train_dl <- get_data_loader(X[train, ], Y[train, ],
-                                batch_size = batchsize, shuffle = shuffle)
-    valid_dl <- get_data_loader(X[valid, ], Y[valid, ],
-                                batch_size = batchsize, shuffle = shuffle)
-  }
-  else {
-    train_dl <- get_data_loader(X, Y, batch_size = batchsize,
-                                shuffle = shuffle)
-    valid_dl <- NULL
+  if(use_custom_dl){
+    train_dl <- train_data_loader
+    valid_dl <- valid_data_loader
+    batchsize <- as.integer(dim(X)[1])
+  } else {
+    if (validation != 0) {
+      n_samples <- dim(X)[1]
+      valid <- sort(sample(c(1:n_samples), replace = FALSE,
+                           size = round(validation * n_samples)))
+      train <- c(1:n_samples)[-valid]
+      train_dl <- get_data_loader(X[train, ], Y[train, ],
+                                  batch_size = batchsize, shuffle = shuffle)
+      valid_dl <- get_data_loader(X[valid, ], Y[valid, ],
+                                  batch_size = batchsize, shuffle = shuffle)
+    }
+    else {
+      train_dl <- get_data_loader(X, Y, batch_size = batchsize,
+                                  shuffle = shuffle)
+      valid_dl <- NULL
+    }
   }
   input_shape <- dim(X)[-1]
   architecture <- adjust_architecture(architecture = architecture,
