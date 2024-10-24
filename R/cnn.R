@@ -131,7 +131,7 @@ cnn<-function (X = NULL, Y = NULL, architecture, loss = c("mse", "mae",
 {
   use_custom_dl<-!is.null(dataloader)
   if(use_custom_dl){
-    sample_batch = data_loader$.iter()$.next()
+    sample_batch = train_data_loader$.iter()$.next()
     X<- as.array(sample_batch$X)
     Y<- c(as.matrix(sample_batch$Y))
     batchsize=2L
