@@ -403,170 +403,223 @@ inceptionBlock <- function(type, channel_mult, dropout){
 }
 build_cnn<-function (input_shape, output_shape, architecture)
 {
-  input_dim <- length(input_shape) - 1
-  net_layers = list()
-  counter <- 1
-  flattened <- FALSE
-  transfer <- FALSE
-  for (layer in architecture) {
-    if (inherits(layer, "transfer")) {
-      if (!(input_dim == 2))
-        stop("The pretrained models only work on images: [n, channels, x, y]")
-
-      transfer_model <- get_pretrained_model(layer$name,
-                                             layer$pretrained)
-      if (layer$freeze)
-        transfer_model <- freeze_weights(transfer_model)
-      if(input_shape[1]!=3){
-        transfer_model<-tryCatch(
-          {
-            cur<-transfer_model
-            call_string<-"transfer_model"
-            while(length(cur$children)>0){
-              cur_name<-names(cur$children)[1]
-              call_string<-paste0(call_string, "[['", cur_name, "']]")
-              cur<-eval(rlang::parse_expr(call_string))
+      input_dim <- length(input_shape) - 1
+    net_layers = list()
+    counter <- 1
+    flattened <- FALSE
+    transfer <- FALSE
+    for (layer in architecture) {
+        if (inherits(layer, "transfer")) {
+            if (!(input_dim == 2)) 
+                stop("The pretrained models only work on images: [n, channels, x, y]")
+            transfer_model <- get_pretrained_model(layer$name, 
+                layer$pretrained)
+            if (layer$freeze) 
+                transfer_model <- freeze_weights(transfer_model)
+            if (input_shape[1] != 3) {
+                transfer_model <- tryCatch({
+                  cur <- transfer_model
+                  call_string <- "transfer_model"
+                  while (length(cur$children) > 0) {
+                    cur_name <- names(cur$children)[1]
+                    call_string <- paste0(call_string, "[['", 
+                      cur_name, "']]")
+                    cur <- eval(rlang::parse_expr(call_string))
+                  }
+                  first_layer <- torch::nn_conv2d(in_channels = as.integer(input_shape[1]), 
+                    out_channels = as.integer(cur$out_channels), 
+                    kernel_size = as.integer(cur$kernel_size), 
+                    stride = as.integer(cur$stride), padding = as.integer(cur$padding), 
+                    dilation = as.integer(cur$dilation), groups = as.integer(cur$groups), 
+                    bias = !is.null(cur$bias), padding_mode = cur$padding_mode)
+                  call_string <- paste0(call_string, "<-first_layer")
+                  eval(rlang::parse_expr(call_string))
+                  transfer_model
+                }, error = function(x) stop(paste0("automatic input layer adjustment to ", 
+                  input_shape[1], " layers failed with error message:\n", 
+                  x)))
             }
-            first_layer <- torch::nn_conv2d(
-              in_channels = as.integer(input_shape[1])
-              , out_channels = as.integer(cur$out_channels)
-              , kernel_size = as.integer(cur$kernel_size)
-              , stride = as.integer(cur$stride)
-              , padding = as.integer(cur$padding)
-              , dilation = as.integer(cur$dilation)
-              , groups = as.integer(cur$groups)
-              , bias = !is.null(cur$bias)
-              , padding_mode = cur$padding_mode
-            )
-            call_string<-paste0(call_string, "<-first_layer")
-            eval(rlang::parse_expr(call_string))
-            transfer_model
-            },error = function(x)stop(paste0("automatic input layer adjustment to ", input_shape[1], " layers failed with error message:\n", x))
-
-
-        )
-      }
-      if (!layer$replace_classifier) {
-        transfer_model <- replace_output_layer(transfer_model,
-                                               output_shape)
-
-        return(transfer_model)
-      }
-      transfer <- TRUE
-      input_shape <- get_transfer_output_shape(layer$name)
+            if (!layer$replace_classifier) {
+                transfer_model <- replace_output_layer(transfer_model, 
+                  output_shape)
+                if (layer$name == "inception_v3") {
+                  n1 <- transfer_model[[1]]
+                  n2 <- transfer_model[[2]]
+                  n3 <- transfer_model[[3]]
+                  n4 <- transfer_model[[4]]
+                  n5 <- transfer_model[[5]]
+                  n6 <- transfer_model[[6]]
+                  n7 <- transfer_model[[7]]
+                  n8 <- transfer_model[[8]]
+                  n9 <- transfer_model[[9]]
+                  n10 <- transfer_model[[10]]
+                  n11 <- transfer_model[[11]]
+                  n12 <- transfer_model[[12]]
+                  n13 <- transfer_model[[13]]
+                  n14 <- transfer_model[[14]]
+                  n15 <- transfer_model[[15]]
+                  n16 <- transfer_model[[16]]
+                  n17 <- transfer_model[[17]]
+                  n18 <- transfer_model[[18]]
+                  n19 <- transfer_model[[19]]
+                  n20 <- transfer_model[[20]]
+                  n21 <- transfer_model[[21]]
+                  n21 <- torch::nn_sequential(torch::nn_flatten(), 
+                    n21)
+                  transfer_model <- torch::nn_module(initialize = function(n1, 
+                    n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, 
+                    n12, n13, n14, n15, n16, n17, n18, n19, n20, 
+                    n21) {
+                    self$n1 = n1
+                    self$n2 = n2
+                    self$n3 = n3
+                    self$n4 = n4
+                    self$n5 = n5
+                    self$n6 = n6
+                    self$n7 = n7
+                    self$n8 = n8
+                    self$n9 = n9
+                    self$n10 = n10
+                    self$n11 = n11
+                    self$n12 = n12
+                    self$n13 = n13
+                    self$n14 = n14
+                    self$n15 = n15
+                    self$n16 = n16
+                    self$n17 = n17
+                    self$n18 = n18
+                    self$n19 = n19
+                    self$n20 = n20
+                    self$n21 = n21
+                  }, forward = function(x) {
+                    self$n21(self$n20(self$n19(self$n18(self$n17(self$n16(self$n15(self$n14(self$n13(self$n12(self$n11(self$n10(self$n9(self$n8(self$n7(self$n6(self$n5(self$n4(self$n3(self$n2(self$n1(x)))))))))))))))))))))
+                  })
+                  transfer_model <- transfer_model(n1, n2, n3, 
+                    n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, 
+                    n14, n15, n16, n17, n18, n19, n20, n21)
+                  purrr::walk(transfer_model$parameters, function(param) param$requires_grad_(FALSE))
+                  purrr::walk(n1$parameters, function(param) param$requires_grad_(TRUE))
+                  purrr::walk(n21$parameters, function(param) param$requires_grad_(TRUE))
+                  transfer_model[["n1"]] <- n1
+                  transfer_model[["n21"]] <- n21
+                }
+                return(transfer_model)
+            }
+            transfer <- TRUE
+            input_shape <- get_transfer_output_shape(layer$name)
+        }
+        else if (inherits(layer, "inceptionBlock")) {
+            if (layer$type == "2D") {
+                net_layers[[counter]] <- inceptionBlock_A_2D(input_shape[1], 
+                  layer$channel_mult, layer$dropout)
+                input_shape[1] <- 18L * layer$channel_mult
+                counter <- counter + 1
+            }
+            else if (layer$type == "red") {
+                net_layers[[counter]] <- inceptionBlock_A_2D_reduction(input_shape[1], 
+                  layer$channel_mult, layer$dropout)
+                input_shape <- c(18L * layer$channel_mult, input_shape[2:3] - 
+                  c(2, 0))
+                counter <- counter + 1
+            }
+            else if (layer$type == "1D") {
+                net_layers[[counter]] <- inceptionBlock_A_1D(input_shape[1], 
+                  layer$channel_mult, layer$dropout)
+                input_shape[1] <- 18L * layer$channel_mult
+                counter <- counter + 1
+            }
+        }
+        else if (inherits(layer, "conv")) {
+            net_layers[[counter]] <- switch(input_dim, torch::nn_conv1d(input_shape[1], 
+                layer[["n_kernels"]], layer[["kernel_size"]], 
+                padding = layer[["padding"]], stride = layer[["stride"]], 
+                dilation = layer[["dilation"]], bias = layer[["bias"]]), 
+                torch::nn_conv2d(input_shape[1], layer[["n_kernels"]], 
+                  layer[["kernel_size"]], padding = layer[["padding"]], 
+                  stride = layer[["stride"]], dilation = layer[["dilation"]], 
+                  bias = layer[["bias"]]), torch::nn_conv3d(input_shape[1], 
+                  layer[["n_kernels"]], layer[["kernel_size"]], 
+                  padding = layer[["padding"]], stride = layer[["stride"]], 
+                  dilation = layer[["dilation"]], bias = layer[["bias"]]))
+            counter <- counter + 1
+            input_shape <- get_output_shape(input_shape = input_shape, 
+                n_kernels = layer[["n_kernels"]], kernel_size = layer[["kernel_size"]], 
+                stride = layer[["stride"]], padding = layer[["padding"]], 
+                dilation = layer[["dilation"]])
+            if (layer[["normalization"]]) {
+                net_layers[[counter]] <- switch(input_dim, torch::nn_batch_norm1d(input_shape[1]), 
+                  torch::nn_batch_norm2d(input_shape[1]), torch::nn_batch_norm3d(input_shape[1]))
+                counter <- counter + 1
+            }
+            net_layers[[counter]] <- get_activation_layer(layer[["activation"]])
+            counter <- counter + 1
+            if (layer[["dropout"]] > 0) {
+                net_layers[[counter]] <- switch(input_dim, torch::nn_dropout(layer[["dropout"]]), 
+                  torch::nn_dropout2d(layer[["dropout"]]), torch::nn_dropout3d(layer[["dropout"]]))
+                counter <- counter + 1
+            }
+        }
+        else if (inherits(layer, "maxPool")) {
+            net_layers[[counter]] <- switch(input_dim, torch::nn_max_pool1d(layer[["kernel_size"]], 
+                padding = layer[["padding"]], stride = layer[["stride"]], 
+                dilation = layer[["dilation"]]), torch::nn_max_pool2d(layer[["kernel_size"]], 
+                padding = layer[["padding"]], stride = layer[["stride"]], 
+                dilation = layer[["dilation"]]), torch::nn_max_pool3d(layer[["kernel_size"]], 
+                padding = layer[["padding"]], stride = layer[["stride"]], 
+                dilation = layer[["dilation"]]))
+            counter <- counter + 1
+            input_shape <- get_output_shape(input_shape = input_shape, 
+                n_kernels = input_shape[1], kernel_size = layer[["kernel_size"]], 
+                stride = layer[["stride"]], padding = layer[["padding"]], 
+                dilation = layer[["dilation"]])
+        }
+        else if (inherits(layer, "avgPool")) {
+            net_layers[[counter]] <- switch(input_dim, torch::nn_avg_pool1d(layer[["kernel_size"]], 
+                padding = layer[["padding"]], stride = layer[["stride"]]), 
+                torch::nn_avg_pool2d(layer[["kernel_size"]], 
+                  padding = layer[["padding"]], stride = layer[["stride"]]), 
+                torch::nn_avg_pool3d(layer[["kernel_size"]], 
+                  padding = layer[["padding"]], stride = layer[["stride"]]))
+            counter <- counter + 1
+            input_shape <- get_output_shape(input_shape = input_shape, 
+                n_kernels = input_shape[1], kernel_size = layer[["kernel_size"]], 
+                stride = layer[["stride"]], padding = layer[["padding"]], 
+                dilation = rep(1, input_dim))
+        }
+        else if (inherits(layer, "linear")) {
+            if (!flattened) {
+                net_layers[[counter]] <- torch::nn_flatten()
+                counter <- counter + 1
+                input_shape <- prod(input_shape)
+                flattened <- T
+            }
+            net_layers[[counter]] <- torch::nn_linear(in_features = input_shape, 
+                out_features = layer[["n_neurons"]], bias = layer[["bias"]])
+            input_shape <- layer[["n_neurons"]]
+            counter <- counter + 1
+            if (layer[["normalization"]]) {
+                net_layers[[counter]] <- torch::nn_batch_norm1d(layer[["n_neurons"]])
+                counter <- counter + 1
+            }
+            net_layers[[counter]] <- cito:::get_activation_layer(layer[["activation"]])
+            counter <- counter + 1
+            if (layer[["dropout"]] > 0) {
+                net_layers[[counter]] <- torch::nn_dropout(layer[["dropout"]])
+                counter <- counter + 1
+            }
+        }
     }
-    else if (inherits(layer, "inceptionBlock")) {
-      if (layer$type == "2D") {
-        net_layers[[counter]] <- inceptionBlock_A_2D(input_shape[1],
-                                                     layer$channel_mult, layer$dropout)
-        input_shape[1] <- 18L * layer$channel_mult
-        counter <- counter + 1
-      }
-      else if (layer$type == "red") {
-        net_layers[[counter]] <- inceptionBlock_A_2D_reduction(input_shape[1],
-                                                               layer$channel_mult, layer$dropout)
-        input_shape <- c(18L * layer$channel_mult, input_shape[2:3] -
-                           c(2, 0))
-        counter <- counter + 1
-      }
-      else if (layer$type == "1D") {
-        net_layers[[counter]] <- inceptionBlock_A_1D(input_shape[1],
-                                                     layer$channel_mult, layer$dropout)
-        input_shape[1] <- 18L * layer$channel_mult
-        counter <- counter + 1
-      }
-    }
-    else if (inherits(layer, "conv")) {
-      net_layers[[counter]] <- switch(input_dim, torch::nn_conv1d(input_shape[1],
-                                                                  layer[["n_kernels"]], layer[["kernel_size"]],
-                                                                  padding = layer[["padding"]], stride = layer[["stride"]],
-                                                                  dilation = layer[["dilation"]], bias = layer[["bias"]]),
-                                      torch::nn_conv2d(input_shape[1], layer[["n_kernels"]],
-                                                       layer[["kernel_size"]], padding = layer[["padding"]],
-                                                       stride = layer[["stride"]], dilation = layer[["dilation"]],
-                                                       bias = layer[["bias"]]), torch::nn_conv3d(input_shape[1],
-                                                                                                 layer[["n_kernels"]], layer[["kernel_size"]],
-                                                                                                 padding = layer[["padding"]], stride = layer[["stride"]],
-                                                                                                 dilation = layer[["dilation"]], bias = layer[["bias"]]))
-      counter <- counter + 1
-      input_shape <- get_output_shape(input_shape = input_shape,
-                                      n_kernels = layer[["n_kernels"]], kernel_size = layer[["kernel_size"]],
-                                      stride = layer[["stride"]], padding = layer[["padding"]],
-                                      dilation = layer[["dilation"]])
-      if (layer[["normalization"]]) {
-        net_layers[[counter]] <- switch(input_dim, torch::nn_batch_norm1d(input_shape[1]),
-                                        torch::nn_batch_norm2d(input_shape[1]), torch::nn_batch_norm3d(input_shape[1]))
-        counter <- counter + 1
-      }
-      net_layers[[counter]] <- get_activation_layer(layer[["activation"]])
-      counter <- counter + 1
-      if (layer[["dropout"]] > 0) {
-        net_layers[[counter]] <- switch(input_dim, torch::nn_dropout(layer[["dropout"]]),
-                                        torch::nn_dropout2d(layer[["dropout"]]), torch::nn_dropout3d(layer[["dropout"]]))
-        counter <- counter + 1
-      }
-    }
-    else if (inherits(layer, "maxPool")) {
-      net_layers[[counter]] <- switch(input_dim, torch::nn_max_pool1d(layer[["kernel_size"]],
-                                                                      padding = layer[["padding"]], stride = layer[["stride"]],
-                                                                      dilation = layer[["dilation"]]), torch::nn_max_pool2d(layer[["kernel_size"]],
-                                                                                                                            padding = layer[["padding"]], stride = layer[["stride"]],
-                                                                                                                            dilation = layer[["dilation"]]), torch::nn_max_pool3d(layer[["kernel_size"]],
-                                                                                                                                                                                  padding = layer[["padding"]], stride = layer[["stride"]],
-                                                                                                                                                                                  dilation = layer[["dilation"]]))
-      counter <- counter + 1
-      input_shape <- get_output_shape(input_shape = input_shape,
-                                      n_kernels = input_shape[1], kernel_size = layer[["kernel_size"]],
-                                      stride = layer[["stride"]], padding = layer[["padding"]],
-                                      dilation = layer[["dilation"]])
-    }
-    else if (inherits(layer, "avgPool")) {
-      net_layers[[counter]] <- switch(input_dim, torch::nn_avg_pool1d(layer[["kernel_size"]],
-                                                                      padding = layer[["padding"]], stride = layer[["stride"]]),
-                                      torch::nn_avg_pool2d(layer[["kernel_size"]],
-                                                           padding = layer[["padding"]], stride = layer[["stride"]]),
-                                      torch::nn_avg_pool3d(layer[["kernel_size"]],
-                                                           padding = layer[["padding"]], stride = layer[["stride"]]))
-      counter <- counter + 1
-      input_shape <- get_output_shape(input_shape = input_shape,
-                                      n_kernels = input_shape[1], kernel_size = layer[["kernel_size"]],
-                                      stride = layer[["stride"]], padding = layer[["padding"]],
-                                      dilation = rep(1, input_dim))
-    }
-    else if (inherits(layer, "linear")) {
-      if (!flattened) {
+    if (!flattened) {
         net_layers[[counter]] <- torch::nn_flatten()
         counter <- counter + 1
         input_shape <- prod(input_shape)
-        flattened <- T
-      }
-      net_layers[[counter]] <- torch::nn_linear(in_features = input_shape,
-                                                out_features = layer[["n_neurons"]], bias = layer[["bias"]])
-      input_shape <- layer[["n_neurons"]]
-      counter <- counter + 1
-      if (layer[["normalization"]]) {
-        net_layers[[counter]] <- torch::nn_batch_norm1d(layer[["n_neurons"]])
-        counter <- counter + 1
-      }
-      net_layers[[counter]] <- cito:::get_activation_layer(layer[["activation"]])
-      counter <- counter + 1
-      if (layer[["dropout"]] > 0) {
-        net_layers[[counter]] <- torch::nn_dropout(layer[["dropout"]])
-        counter <- counter + 1
-      }
     }
-  }
-  if (!flattened) {
-    net_layers[[counter]] <- torch::nn_flatten()
-    counter <- counter + 1
-    input_shape <- prod(input_shape)
-  }
-  if (!is.null(output_shape))
-    net_layers[[counter]] <- torch::nn_linear(in_features = input_shape,
-                                              out_features = output_shape)
-  net <- do.call(torch::nn_sequential, net_layers)
-  if (transfer) {
-    net <- replace_classifier(transfer_model, net)
-  }
-  return(net)
+    if (!is.null(output_shape)) 
+        net_layers[[counter]] <- torch::nn_linear(in_features = input_shape, 
+            out_features = output_shape)
+    net <- do.call(torch::nn_sequential, net_layers)
+    if (transfer) {
+        net <- replace_classifier(transfer_model, net)
+    }
+    return(net)
 }
