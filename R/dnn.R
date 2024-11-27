@@ -166,72 +166,42 @@
 #' @author Christian Amesoeder, Maximilian Pichler
 #' @seealso \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{summary.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}, \code{\link{PDP}}, \code{\link{ALE}},
 #' @export
-dnn <- function(formula = NULL,
-                data = NULL,
-                hidden = c(50L, 50L),
-                activation = "selu",
-                bias = TRUE,
-                dropout = 0.0,
-                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
-                validation = 0,
-                lambda = 0.0,
-                alpha = 0.5,
-                optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop"),
-                lr = 0.01,
-                batchsize = NULL,
-                burnin = 30,
-                baseloss = NULL,
-                shuffle = TRUE,
-                epochs = 100,
-                bootstrap = NULL,
-                bootstrap_parallel = FALSE,
-                plot = TRUE,
-                verbose = TRUE,
-                lr_scheduler = NULL,
-                custom_parameters = NULL,
-                device = c("cpu","cuda", "mps"),
-                early_stopping = FALSE,
-                tuning = config_tuning(),
-                X = NULL,
-                Y = NULL) {
-
-
+dnn<-function (formula = NULL, data = NULL, hidden = c(50L, 50L), 
+          activation = "selu", bias = TRUE, dropout = 0, loss = c("mse", 
+                                                                  "mae", "softmax", "cross-entropy", "gaussian", "binomial", 
+                                                                  "poisson", "mvp", "nbinom", "multinomial", "clogit"), 
+          validation = 0, lambda = 0, alpha = 0.5, optimizer = c("sgd", 
+                                                                 "adam", "adadelta", "adagrad", "rmsprop", "rprop"), lr = 0.01, 
+          batchsize = NULL, burnin = 30, baseloss = NULL, shuffle = TRUE, 
+          epochs = 100, bootstrap = NULL, bootstrap_parallel = FALSE, 
+          plot = TRUE, verbose = TRUE, lr_scheduler = NULL, custom_parameters = NULL, 
+          device = c("cpu", "cuda", "mps"), early_stopping = FALSE, 
+          tuning = config_tuning(), X = NULL, Y = NULL, sampler=NULL) 
+{
   out <- list()
-
   class(out) <- "citodnn"
-
-  tuner = check_hyperparameters(hidden = hidden ,
-                                bias = bias,
-                                activation = activation,
-                                lambda = lambda,
-                                alpha = alpha,
-                                dropout =dropout,
-                                batchsize = batchsize,
-                                epochs = epochs,
+  tuner = cito:::check_hyperparameters(hidden = hidden, bias = bias, 
+                                activation = activation, lambda = lambda, alpha = alpha, 
+                                dropout = dropout, batchsize = batchsize, epochs = epochs, 
                                 lr = lr)
-
-
   device <- match.arg(device)
-
-  if(!is.function(loss) & !inherits(loss,"family")){
+  if (!is.function(loss) & !inherits(loss, "family")) {
     loss <- match.arg(loss)
-
-    if((device == "mps") & (loss %in% c("poisson", "nbinom"))) {
+    if ((device == "mps") & (loss %in% c("poisson", "nbinom"))) {
       message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
       device = "cpu"
     }
   }
-
-  if(inherits(loss,"family")) {
-    if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
+  if (inherits(loss, "family")) {
+    if ((device == "mps") & (loss$family %in% c("poisson", 
+                                                "nbinom"))) {
       message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
       device = "cpu"
     }
   }
-
   device_old = device
-  device = check_device(device)
-  tmp_data = get_X_Y(formula, X, Y, data)
+  device = cito:::check_device(device)
+  tmp_data = cito:::get_X_Y(formula, X, Y, data)
   old_formula = tmp_data$old_formula
   out$old_formula = old_formula
   X = tmp_data$X
@@ -240,159 +210,154 @@ dnn <- function(formula = NULL,
   formula = tmp_data$formula
   Z_formula = tmp_data$Z_terms
   data = tmp_data$data
-
-  if(!is.null(Z)) {
-
+  if (!is.null(Z)) {
     Z_args = list()
-    for(i in 1:length(tmp_data$Z_args)) {
+    for (i in 1:length(tmp_data$Z_args)) {
       Z_args = append(Z_args, eval(tmp_data$Z_args[[i]]))
     }
-
-    embeddings = list(inputs = ncol(Z),
-                      dims = apply(Z, 2, function(z) length(levels(as.factor(z)))), # input embeddings
-                      args = Z_args )
-  } else {
+    embeddings = list(inputs = ncol(Z), dims = apply(Z, 2, 
+                                                     function(z) length(levels(as.factor(z)))), args = Z_args)
+  }
+  else {
     embeddings = NULL
   }
-
-  if(is.null(batchsize)) batchsize = round(0.1*nrow(X))
-
-  # No training if no Y specified (E.g. used in mmn())
-
-  # TODO: check for redundancy
-  if(is.null(Y)) {
-    net <- build_dnn(input = ncol(X), output = NULL,
-                     hidden = hidden, activation = activation,
-                     bias = bias, dropout = dropout, embeddings = embeddings)
-    model_properties <- list(input = ncol(X),
-                             output = NULL,
-                             hidden = hidden,
-                             activation = activation,
-                             bias = bias,
-                             dropout = dropout,
-                             embeddings = embeddings)
-
+  if (is.null(batchsize)) 
+    batchsize = round(0.1 * nrow(X))
+  if (is.null(Y)) {
+    net <- build_dnn(input = ncol(X), output = NULL, hidden = hidden, 
+                     activation = activation, bias = bias, dropout = dropout, 
+                     embeddings = embeddings)
+    model_properties <- list(input = ncol(X), output = NULL, 
+                             hidden = hidden, activation = activation, bias = bias, 
+                             dropout = dropout, embeddings = embeddings)
     out$net <- net
     out$call <- match.call()
-    out$call$formula <- stats::terms.formula(formula, data=data)
+    out$call$formula <- stats::terms.formula(formula, data = data)
     out$Z_formula = Z_formula
     out$data <- list(X = X, Y = NULL, data = data, Z = Z)
-    out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j))
+    out$data$xlvls <- lapply(data[, sapply(data, is.factor), 
+                                  drop = F], function(j) levels(j))
     out$model_properties <- model_properties
     return(out)
   }
-
-
-  loss_obj <- get_loss(loss, device = device, X = X, Y = Y)
-  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(parameter = loss_obj$parameter)
-  if(!is.null(custom_parameters)){
-    if(!inherits(custom_parameters,"list")){
+  loss_obj <- cito:::get_loss(loss, device = device, X = X, Y = Y)
+  if (!is.null(loss_obj$parameter)) 
+    loss_obj$parameter <- list(parameter = loss_obj$parameter)
+  if (!is.null(custom_parameters)) {
+    if (!inherits(custom_parameters, "list")) {
       warning("custom_parameters has to be list")
-    }else{
-      custom_parameters<- lapply(custom_parameters,function(x) torch::torch_tensor(x, requires_grad = TRUE, device = device))
-      loss_obj$parameter <- append(loss_obj$parameter, unlist(custom_parameters))
+    }
+    else {
+      custom_parameters <- lapply(custom_parameters, function(x) torch::torch_tensor(x, 
+                                                                                     requires_grad = TRUE, device = device))
+      loss_obj$parameter <- append(loss_obj$parameter, 
+                                   unlist(custom_parameters))
     }
   }
-
   loss.fkt <- loss_obj$loss
-  if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-
+  if (!is.null(loss_obj$parameter)) 
+    list2env(loss_obj$parameter, envir = environment(fun = loss.fkt))
   response_column <- NULL
-  if(inherits(loss_obj$call, "character") && loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) #Gibt die RHS aus, falls keine LHS vorhanden. Relevant?
-
-  targets <- format_targets(Y, loss_obj)
+  if (inherits(loss_obj$call, "character") && loss_obj$call == 
+      "softmax") 
+    response_column = as.character(LHSForm(formula))
+  targets <- cito:::format_targets(Y, loss_obj)
   Y_torch <- targets$Y
   Y_transformed = as.matrix(Y_torch)
   Y_base <- targets$Y_base
   y_dim <- targets$y_dim
   ylvls <- targets$ylvls
   responses <- targets$responses
-
   X_torch <- torch::torch_tensor(X)
-  if(!is.null(embeddings)) {
+  if (!is.null(embeddings)) {
     Z_torch = torch::torch_tensor(Z, dtype = torch::torch_long())
-  } else {
+  }
+  else {
     Z_torch = NULL
   }
-
-  ### Hyperparameter tuning ###
-
-  if(length(tuner) != 0 ) {
+  if (length(tuner) != 0) {
     parameters = as.list(match.call())
     parameters[!nzchar(names(parameters))] = NULL
-    #parameters$hidden = hidden
-    model = tuning_function(tuner, parameters, loss.fkt,loss_obj, X, Y, Z, data, old_formula, tuning, Y_torch, loss, device_old) # add Z....
+    model = tuning_function(tuner, parameters, loss.fkt, 
+                            loss_obj, X, Y, Z, data, old_formula, tuning, Y_torch, 
+                            loss, device_old)
     return(model)
   }
-
-
-  if(is.null(bootstrap) || !bootstrap) {
-
-    if(is.null(baseloss)) {
-      baseloss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), dtype = Y_base$dtype)$to(device = device), Y_torch$to(device = device))$mean()$cpu() )
+  if (is.null(bootstrap) || !bootstrap) {
+    if (is.null(baseloss)) {
+      baseloss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), 
+                                                         dtype = Y_base$dtype)$to(device = device), Y_torch$to(device = device))$mean()$cpu())
     }
-    ### dataloader  ###
-    if(validation != 0) {
+    if (validation != 0) {
       n_samples <- nrow(X)
-      valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
+      valid <- sort(sample(c(1:n_samples), replace = FALSE, 
+                           size = round(validation * n_samples)))
       train <- c(1:n_samples)[-valid]
-      if(is.null(Z_torch)) {
-        train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle)
-        valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle)
-      } else {
-        train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], Z_torch[train,], batch_size = batchsize, shuffle = shuffle)
-        valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], Z_torch[valid,], batch_size = batchsize, shuffle = shuffle)
+      if (is.null(Z_torch)) {
+        train_dl <- get_data_loader(X_torch[train, ], 
+                                    Y_torch[train, ], batch_size = batchsize, shuffle = shuffle)
+        valid_dl <- get_data_loader(X_torch[valid, ], 
+                                    Y_torch[valid, ], batch_size = batchsize, shuffle = shuffle)
       }
-    } else {
-      if(is.null(Z_torch)) {
-        train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
-      } else {
-        train_dl <- get_data_loader(X_torch, Y_torch, Z_torch, batch_size = batchsize, shuffle = shuffle)
+      else {
+        train_dl <- get_data_loader(X_torch[train, ], 
+                                    Y_torch[train, ], Z_torch[train, ], batch_size = batchsize, 
+                                    shuffle = shuffle)
+        valid_dl <- get_data_loader(X_torch[valid, ], 
+                                    Y_torch[valid, ], Z_torch[valid, ], batch_size = batchsize, 
+                                    shuffle = shuffle)
+      }
+    }
+    else {
+      if (is.null(Z_torch)) {
+        if(is.null(sampler)){
+          train_dl <- get_data_loader(X_torch, Y_torch, 
+                                    batch_size = batchsize, shuffle = shuffle)
+        } else {
+          sampler<-readRDS(paste0("./data/results/dnn_tuning/sampler/", sampler))
+          sampler<-sampler(as.numeric(Y_torch), batchsize)
+          train_dl <- get_data_loader(X_torch, Y_torch, sampler=sampler)
+        }
+      }
+      else {
+        train_dl <- get_data_loader(X_torch, Y_torch, 
+                                    Z_torch, batch_size = batchsize, shuffle = shuffle)
       }
       valid_dl <- NULL
     }
-
-    net <- build_dnn(input = ncol(X), output = y_dim,
-                      hidden = hidden, activation = activation,
-                      bias = bias, dropout = dropout, embeddings = embeddings)
-    model_properties <- list(input = ncol(X),
-                             output = y_dim,
-                             hidden = hidden,
-                             activation = activation,
-                             bias = bias,
-                             dropout = dropout,
-                             embeddings = embeddings)
-    training_properties <- list(lr = lr,
-                               lr_scheduler = lr_scheduler,
-                               optimizer = optimizer,
-                               epochs = epochs,
-                               early_stopping = early_stopping,
-                               plot = plot,
-                               validation = validation,
-                               lambda = lambda,
-                               alpha = alpha,
-                               batchsize = batchsize,
-                               shuffle = shuffle,
-                               formula = formula,
-                               embeddings = embeddings)
+    net <- cito:::build_dnn(input = ncol(X), output = y_dim, hidden = hidden, 
+                     activation = activation, bias = bias, dropout = dropout, 
+                     embeddings = embeddings)
+    model_properties <- list(input = ncol(X), output = y_dim, 
+                             hidden = hidden, activation = activation, bias = bias, 
+                             dropout = dropout, embeddings = embeddings)
+    training_properties <- list(lr = lr, lr_scheduler = lr_scheduler, 
+                                optimizer = optimizer, epochs = epochs, early_stopping = early_stopping, 
+                                plot = plot, validation = validation, lambda = lambda, 
+                                alpha = alpha, batchsize = batchsize, shuffle = shuffle, 
+                                formula = formula, embeddings = embeddings)
     out <- list()
     class(out) <- "citodnn"
     out$net <- net
     out$call <- match.call()
-    out$call$formula <- stats::terms.formula(formula, data=data)
+    out$call$formula <- stats::terms.formula(formula, data = data)
     out$Z_formula = Z_formula
     out$old_formula = old_formula
     out$loss <- loss_obj
-    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z)
-    # levels should be only saved for features in the model, otherwise we get warnings from the predict function
-    data_tmp = data[, labels(stats::terms(formula, data = data)), drop=FALSE]
-    out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
+    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, 
+                     Z = Z)
+    data_tmp = data[, labels(stats::terms(formula, data = data)), 
+                    drop = FALSE]
+    out$data$xlvls <- lapply(data_tmp[, sapply(data_tmp, 
+                                               is.factor), drop = F], function(j) levels(j))
     out$base_loss = baseloss
-    if(!is.null(ylvls))  {
+    if (!is.null(ylvls)) {
       out$data$ylvls <- ylvls
-      out$data$xlvls <- out$data$xlvls[-which(names(out$data$xlvls) %in% as.character(formula[[2]]))]
+      out$data$xlvls <- out$data$xlvls[-which(names(out$data$xlvls) %in% 
+                                                as.character(formula[[2]]))]
     }
-    if(validation != 0) out$data <- append(out$data, list(validation = valid))
+    if (validation != 0) 
+      out$data <- append(out$data, list(validation = valid))
     out$weights <- list()
     out$use_model_epoch <- 1
     out$loaded_model_epoch <- 0
@@ -401,73 +366,80 @@ dnn <- function(formula = NULL,
     out$device = device_old
     out$responses = responses
     out$burnin = burnin
-
-    ### training loop ###
-    out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
-
-
-  } else {
+    out <- cito:::train_model(model = out, epochs = epochs, device = device, 
+                       train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
+  }
+  else {
     out <- list()
     class(out) <- "citodnnBootstrap"
-
-    if(bootstrap_parallel == FALSE) {
-      pb = progress::progress_bar$new(total = bootstrap, format = "[:bar] :percent :eta", width = round(getOption("width")/2))
+    if (bootstrap_parallel == FALSE) {
+      pb = progress::progress_bar$new(total = bootstrap, 
+                                      format = "[:bar] :percent :eta", width = round(getOption("width")/2))
       models = list()
-
-      for(b in 1:bootstrap) {
-        indices <- sample(nrow(data),replace = TRUE)
-        m = do.call(dnn, args = list(
-          formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
-          bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
-          optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
-          bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
-          bootstrap_parallel = FALSE
-        ))
+      for (b in 1:bootstrap) {
+        indices <- sample(nrow(data), replace = TRUE)
+        m = do.call(dnn, args = list(formula = old_formula, 
+                                     data = data[indices, ], loss = loss, hidden = hidden, 
+                                     activation = activation, bias = bias, validation = validation, 
+                                     lambda = lambda, alpha = alpha, lr = lr, dropout = dropout, 
+                                     optimizer = optimizer, batchsize = batchsize, 
+                                     shuffle = shuffle, epochs = epochs, plot = FALSE, 
+                                     verbose = FALSE, bootstrap = NULL, device = device_old, 
+                                     custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, 
+                                     early_stopping = early_stopping, bootstrap_parallel = FALSE))
         m$data$indices = indices
-        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z)
+        m$data$original = list(data = data, X = X, Y = Y_transformed, 
+                               Z = Z)
         pb$tick()
         models[[b]] = m
       }
-
-    } else {
-      if(is.logical(bootstrap_parallel)) {
-          bootstrap_parallel = parallel::detectCores() -1
+    }
+    else {
+      if (is.logical(bootstrap_parallel)) {
+        bootstrap_parallel = parallel::detectCores() - 
+          1
       }
-      if(is.numeric(bootstrap_parallel)) {
+      if (is.numeric(bootstrap_parallel)) {
         backend = parabar::start_backend(bootstrap_parallel)
         parabar::export(backend, ls(environment()), environment())
       }
-      parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
-      models <- parabar::par_lapply(backend, 1:bootstrap, function(i) {
-        indices <- sample(nrow(data),replace = TRUE)
-        m = do.call(dnn, args = list(
-          formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
-          bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
-          optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
-          bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
-          bootstrap_parallel = FALSE
-        ))
-        m$data$indices = indices
-        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z)
-        m
-      })
-      if(!is.null(backend)) parabar::stop_backend(backend)
-
+      parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", 
+                             width = round(getOption("width")/2))
+      models <- parabar::par_lapply(backend, 1:bootstrap, 
+                                    function(i) {
+                                      indices <- sample(nrow(data), replace = TRUE)
+                                      m = do.call(dnn, args = list(formula = old_formula, 
+                                                                   data = data[indices, ], loss = loss, hidden = hidden, 
+                                                                   activation = activation, bias = bias, validation = validation, 
+                                                                   lambda = lambda, alpha = alpha, lr = lr, 
+                                                                   dropout = dropout, optimizer = optimizer, 
+                                                                   batchsize = batchsize, shuffle = shuffle, 
+                                                                   epochs = epochs, plot = FALSE, verbose = FALSE, 
+                                                                   bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, 
+                                                                   lr_scheduler = lr_scheduler, early_stopping = early_stopping, 
+                                                                   bootstrap_parallel = FALSE))
+                                      m$data$indices = indices
+                                      m$data$original = list(data = data, X = X, 
+                                                             Y = Y_transformed, Z = Z)
+                                      m
+                                    })
+      if (!is.null(backend)) 
+        parabar::stop_backend(backend)
     }
-
     out$models <- models
-    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z)
+    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, 
+                     Z = Z)
     out$device = device_old
     out$responses = responses
     out$loss = loss_obj$call
     out$response_column = response_column
     out$old_formula = old_formula
-
-    out$successfull = any(!sapply(models, function(m) m$successfull) == 0)
-
+    out$successfull = any(!sapply(models, function(m) m$successfull) == 
+                            0)
   }
   return(out)
 }
+
 
 
 
