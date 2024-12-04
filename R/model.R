@@ -303,7 +303,96 @@ inceptionBlock_A_2D_reduction = torch::nn_module(
   }
 )
 
+inceptionBlock_A_100_reduction = torch::nn_module(
 
+
+  initialize = function(in_channels, channel_mult=16L, dropout=0){
+
+    self$branchA = torch::nn_sequential(
+      convBlock(
+        in_channels = in_channels
+        , out_channels = 4L*channel_mult
+        , kernel_size = c(1L, 100L)
+        , stride = 1L
+        , dropout = dropout
+        , padding = c(0L, 50L)
+      ),
+      convBlock(
+        in_channels = 4L*channel_mult
+        , out_channels = 6L*channel_mult
+        , kernel_size = c(3L, 100L)
+        , dropout = dropout
+        , stride = 1L
+        , padding = c(1L, 50L)
+      ),
+      convBlock(
+        in_channels = 6L*channel_mult
+        , out_channels = 6L*channel_mult
+        , kernel_size = c(3L, 100L)
+        , stride = 1L
+        , padding = 0L
+        , dropout = dropout
+      )
+    )
+
+    self$branchB = torch::nn_sequential(
+      convBlock(
+        in_channels = in_channels
+        , out_channels = 3L*channel_mult
+        , kernel_size = c(1L, 100L)
+        , stride = 1L
+        , dropout = dropout
+        , padding = c(0L, 50L)
+      ),
+      convBlock(
+        in_channels = 3L*channel_mult
+        , out_channels = 4L*channel_mult
+        , kernel_size = c(3L, 100L)
+        , dropout = dropout
+        , stride = 1L
+        , padding = 0L
+      )
+    )
+
+    self$branchC = torch::nn_sequential(
+      torch::nn_avg_pool2d(
+        kernel_size = c(3L,100L)
+        , stride = 1L
+        , padding = c(0L, 50L)
+      ),
+      convBlock(
+        in_channels = in_channels
+        , out_channels = 4L*channel_mult
+        , kernel_size = c(1L, 100L)
+        , stride = 1L
+        , dropout = dropout
+        , padding = 0L
+      )
+    )
+
+    self$branchD = convBlock(
+      in_channels = in_channels
+      , out_channels = 4L*channel_mult
+      , kernel_size = c(3L,100L)
+      , stride = 1L
+      , dropout = dropout
+      , padding = 0L
+    )
+
+  },
+  forward = function(x){
+    branchARes = self$branchA(x)
+    branchBRes = self$branchB(x)
+    branchCRes = self$branchC(x)
+    branchDRes = self$branchD(x)
+    # print(branchARes$size())
+    # print(branchBRes$size())
+    # print(branchCRes$size())
+    # print(branchDRes$size())
+    res = torch::torch_cat(list(branchARes, branchBRes, branchCRes, branchDRes),2L)
+    res
+  }
+)
 
 
 inceptionBlock_A_1D = torch::nn_module(
@@ -526,6 +615,13 @@ build_cnn<-function (input_shape, output_shape, architecture)
                 net_layers[[counter]] <- inceptionBlock_A_1D(input_shape[1], 
                   layer$channel_mult, layer$dropout)
                 input_shape[1] <- 18L * layer$channel_mult
+                counter <- counter + 1
+            }
+            else if (layer$type == "red100") {
+                net_layers[[counter]] <- inceptionBlock_A_100_reduction(input_shape[1], 
+                  layer$channel_mult, layer$dropout)
+                input_shape <- c(18L * layer$channel_mult, input_shape[2:3] - 
+                  c(2, 99))
                 counter <- counter + 1
             }
         }
