@@ -320,7 +320,7 @@ inceptionBlock_A_100_reduction = torch::nn_module(
       convBlock(
         in_channels = 4L*channel_mult
         , out_channels = 6L*channel_mult
-        , kernel_size = c(3L, 100L)
+        , kernel_size = c(3L, 101L)
         , dropout = dropout
         , stride = 1L
         , padding = c(1L, 50L)
@@ -328,7 +328,7 @@ inceptionBlock_A_100_reduction = torch::nn_module(
       convBlock(
         in_channels = 6L*channel_mult
         , out_channels = 6L*channel_mult
-        , kernel_size = c(3L, 100L)
+        , kernel_size = c(3L, 101L)
         , stride = 1L
         , padding = 0L
         , dropout = dropout
@@ -347,7 +347,7 @@ inceptionBlock_A_100_reduction = torch::nn_module(
       convBlock(
         in_channels = 3L*channel_mult
         , out_channels = 4L*channel_mult
-        , kernel_size = c(3L, 100L)
+        , kernel_size = c(3L, 101L)
         , dropout = dropout
         , stride = 1L
         , padding = 0L
@@ -356,7 +356,7 @@ inceptionBlock_A_100_reduction = torch::nn_module(
 
     self$branchC = torch::nn_sequential(
       torch::nn_avg_pool2d(
-        kernel_size = c(3L,100L)
+        kernel_size = c(3L,101L)
         , stride = 1L
         , padding = c(0L, 50L)
       ),
